@@ -1,2 +1,3 @@
 # INI-cpp
-C++ INI file parser
+
+Looking for the INI parser? Check in the source folder for it!

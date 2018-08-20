@@ -1,33 +1,62 @@
 /*!***************************************************************************
 @file    main.cpp
-@author  <author>
-@par     <email/contact info>
-@date    <date here>
+@author  Matthew Cech
+@date    8/19/2018
 
 @brief 
-<you can put a multiline description of your application here...>
+Testing file for the INI parser
 
 @copyright See LICENSE.md
 *****************************************************************************/
 #include <iostream>               // std::cout
-#include <RUtils/RTimekeeper.hpp>  // Rutils::RException
+#include <utility>                // std::pair
+#include <string>                 // std::string
+#include <fstream>                // std::fstream object
+#include <GUtils/GTimekeeper.hpp> // Rutils::RException
+#include "INIParser.hpp"          // The INI parser we're testing
 
+#define TEST_SUCCESS std::make_pair(true, __FUNCTION__)
+#define TEST_FAIL std::make_pair(false, __FUNCTION__)
+#define TEST_RETURN std::pair<bool, std::string>
+#define DUMP_REREAD(str) std::fstream("test.ini", std::ios::out); testFile << str; testFile.close(); testFile.open("test.ini", std::fstream::in | std::ios_base::out)
 
-// Application entry point
+TEST_RETURN TestPairSplit()
+{
+  std::string testString = "testKey=testValue";
+  std::fstream testFile = DUMP_REREAD(testString);
+  INIParser parser = INIParser(testFile);
+  return TEST_SUCCESS;
+}
+
+TEST_RETURN TestPairCategory()
+{
+  std::string test = "[section]\ntestKey=testValue";
+  return TEST_SUCCESS;
+}
+
+TEST_RETURN (*Tests[])(void) = 
+{ 
+    TestPairSplit
+  , TestPairCategory
+  , 
+};
+
 int main(int argc, char** argv)
 {
   // Timing start
-  RUtils::Timekeeper t;
+  GUtils::Timekeeper t;
   t.StartFrame();   
   
-  // <Some code that does things>
-  for (int i{ 0 }; i < 10; ++i)
-    std::cout << "I'm printed line " << i + 1 << "!" << '\n';
+  // Run tests
+  for (int i = 0; i < sizeof(Tests) / sizeof(Tests[0]); ++i)
+  {
+    TEST_RETURN test = Tests[i]();
+    std::cout << test.second << ": " << (test.first ? " Success! " : " FAIL! ") << std::endl;
+  }
 
   // Timing end
   t.EndFrame(); 
-  std::cout << "Printing all that took: " << t.GetLastTimeMS() << "ms\n";
-
-  // Normal termination
+  std::cout << "Tests took: " << t.GetLastTimeMS() << "ms" << std::endl;
+  std::cin.ignore();
   return 0;
 }
