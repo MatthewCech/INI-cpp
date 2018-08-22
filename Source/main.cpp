@@ -18,27 +18,66 @@ Testing file for the INI parser
 #define TEST_SUCCESS std::make_pair(true, __FUNCTION__)
 #define TEST_FAIL std::make_pair(false, __FUNCTION__)
 #define TEST_RETURN std::pair<bool, std::string>
-#define DUMP_REREAD(str) std::fstream("test.ini", std::ios::out); testFile << str; testFile.close(); testFile.open("test.ini", std::fstream::in | std::ios_base::out)
+#define MAKE_TEMP_FILE(str) std::fstream("test.ini", std::ios::out); testFile << str; testFile.close(); testFile.open("test.ini", std::fstream::in | std::ios_base::out)
+
 
 TEST_RETURN TestPairSplit()
 {
   std::string testString = "testKey=testValue";
-  std::fstream testFile = DUMP_REREAD(testString);
+  std::fstream testFile = MAKE_TEMP_FILE(testString);
   INIParser parser = INIParser(testFile);
-  return TEST_SUCCESS;
+
+  INIPair pair = parser.GetPair("testKey");
+  if (pair.Key == "testKey" && pair.Value == "testValue")
+    return TEST_SUCCESS;
+  
+  return TEST_FAIL;
+}
+
+TEST_RETURN TestPairSplitWhitespace()
+{
+  std::string testString = " testKey = testValue ";
+  std::fstream testFile = MAKE_TEMP_FILE(testString);
+  INIParser parser = INIParser(testFile);
+
+  INIPair pair = parser.GetPair("testKey");
+  if (pair.Key == "testKey" && pair.Value == "testValue")
+    return TEST_SUCCESS;
+
+  return TEST_FAIL;
+}
+
+TEST_RETURN TestDefaultCateogry()
+{
+  std::string testString = "testKey=testValue";
+  std::fstream testFile = MAKE_TEMP_FILE(testString);
+  INIParser parser = INIParser(testFile);
+
+  if (parser.GetSection("").size() == 1 && parser.GetSection("")[0].Key == "testKey" && parser.GetSection("")[0].Value == "testValue")
+    return TEST_SUCCESS;
+
+  return TEST_FAIL;
 }
 
 TEST_RETURN TestPairCategory()
 {
-  std::string test = "[section]\ntestKey=testValue";
-  return TEST_SUCCESS;
+  std::string testString = "[section]\ntestKey=testValue";
+  std::fstream testFile = MAKE_TEMP_FILE(testString);
+  INIParser parser = INIParser(testFile);
+
+  auto pairVector = parser.GetSection("section");
+  if(pairVector.size() == 1 && pairVector[0].Key == "testKey" && pairVector[0].Value == "testValue")
+    return TEST_SUCCESS;
+
+  return TEST_FAIL;
 }
 
 TEST_RETURN (*Tests[])(void) = 
 { 
     TestPairSplit
+  , TestPairSplitWhitespace
+  , TestDefaultCateogry
   , TestPairCategory
-  , 
 };
 
 int main(int argc, char** argv)
