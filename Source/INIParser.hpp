@@ -46,10 +46,11 @@ private:
   void trimString(std::string &str);
   bool INIParser::startsWith(const std::string &line, const std::string &chars);
 
-  // Variables
+  // Internal data and refs
   std::fstream &file_;
   std::map<std::string, std::vector<INIPair>> sectionLookup_;
   std::map<std::string, INIPair> directLookup_;
+  //std::vector<INILine
 };
 
   ////////////////////////////////////////
