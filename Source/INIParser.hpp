@@ -28,36 +28,47 @@ struct INIPair
   std::string Value;
 };
 
-class INIParser
+class INIData
 {
 public:
   // Constructor
-  INIParser(std::fstream &file);
+  INIData(std::fstream &file);
 
   // Public methods
   std::vector<INIPair> GetSection(std::string section);
   INIPair GetPair(std::string key);
   std::string Get(std::string key);
+  std::string Export();
 
 private:
   // Private methods
   void trimStringStart(std::string &str);
   void trimStringEnd(std::string &str);
   void trimString(std::string &str);
-  bool INIParser::startsWith(const std::string &line, const std::string &chars);
+  bool INIData::startsWith(const std::string &line, const std::string &chars);
+
+  // Internal structures
+  struct INILine
+  {
+    INILine(std::string section, std::string comment, std::string key, std::string value) : Section(section), Comment(comment), Key(key), Value(value) {  }
+    std::string Section;
+    std::string Comment;
+    std::string Key;
+    std::string Value;
+  };
 
   // Internal data and refs
   std::fstream &file_;
   std::map<std::string, std::vector<INIPair>> sectionLookup_;
   std::map<std::string, INIPair> directLookup_;
-  //std::vector<INILine
+  std::vector<INILine> lines_;
 };
 
   ////////////////////////////////////////
   // Private utility-oriented functions //
 ////////////////////////////////////////
 // Determines if the specified characters lead the string
-bool INIParser::startsWith(const std::string &line, const std::string &chars)
+bool INIData::startsWith(const std::string &line, const std::string &chars)
 {
   for (std::size_t i = 0; i < chars.size(); ++i)
   {
@@ -69,7 +80,7 @@ bool INIParser::startsWith(const std::string &line, const std::string &chars)
 }
 
 // Removes whitespace characters at the beginning of a string
-void INIParser::trimStringStart(std::string &str)
+void INIData::trimStringStart(std::string &str)
 {
   str.erase(str.begin(), std::find_if(str.begin(), str.end(), [](int character) {
     return !std::isspace(character);
@@ -77,7 +88,7 @@ void INIParser::trimStringStart(std::string &str)
 }
 
 // Removes whitespace characters at the end of a string
-void INIParser::trimStringEnd(std::string &str)
+void INIData::trimStringEnd(std::string &str)
 {
   str.erase(std::find_if(str.rbegin(), str.rend(), [](int character) {
     return !std::isspace(character);
@@ -85,7 +96,7 @@ void INIParser::trimStringEnd(std::string &str)
 }
 
 // Removes whitespace characters from the beginning and end of a string
-void INIParser::trimString(std::string &str)
+void INIData::trimString(std::string &str)
 {
   trimStringStart(str);
   trimStringEnd(str);
@@ -95,10 +106,14 @@ void INIParser::trimString(std::string &str)
   ////////////////////////////////////////////////////
   // Publicly accessable constructors and functions //
 ////////////////////////////////////////////////////
-INIParser::INIParser(std::fstream &file) : file_(file)
+INIData::INIData(std::fstream &file) : file_(file)
 {
   if (file.is_open())
   {
+    std::string lineComment = "";
+    std::string lineKey = "";
+    std::string lineValue = "";
+    std::string lineSection = "";
     std::string currentLine = "";
     std::string currentSection = "";
 
@@ -106,57 +121,78 @@ INIParser::INIParser(std::fstream &file) : file_(file)
     {
       trimString(currentLine);
 
-      // Case: Empty line
-      // Appearance:
-      // Notes: Whitespace trimmed.
-      if (currentLine.size() <= 0)
+      // Use loop for contained jumping.
+      do
       {
-        continue;
-      }
 
-      // Case: Comment
-      // Appearance: ; comment
-      // Appearance: # comment
-      // Notes: Comments are single-line.
-      if (startsWith(currentLine, ";#"))
-      {
-        continue;
-      }
+        // Case: Empty line
+        // Appearance:
+        // Notes: Whitespace trimmed.
+        if (currentLine.size() <= 0)
+        {
+          continue;
+        }
 
-      // Case: Section
-      // Appearance: [Section]
-      // Notes: [] clears the section to default.
-      if (startsWith(currentLine, "["))
-      {
-        std::size_t loc = currentLine.find_first_of("]");
+        // Case: Comment
+        // Appearance: ; comment
+        // Appearance: # comment
+        // Notes: Comments are single-line.
+        if (startsWith(currentLine, ";#"))
+        {
+          lineComment = "";
+          continue;
+        }
 
+        // Case: Section
+        // Appearance: [Section]
+        // Notes: [] clears the section to default.
+        if (startsWith(currentLine, "["))
+        {
+          std::size_t loc = currentLine.find_first_of("]");
+
+          if (loc != currentLine.npos)
+          {
+            currentSection = currentLine.substr(1, loc - 1); // subtract 1 for offset
+            lineSection = currentSection;
+          }
+
+          continue;
+        }
+
+        // Case: Key-value pair
+        // Appearance: key = value
+        // Appearance: key=value
+        // Appearance: key =
+        // Appearance: = value
+        // Notes: Trailing and leading whitespace ignored.
+        std::size_t loc = currentLine.find_first_of("=");
         if (loc != currentLine.npos)
-          currentSection = currentLine.substr(1, loc - 1); // subtract 1 for offset
+        {
+          lineKey = currentLine.substr(0, loc);
+          lineValue = currentLine.substr(loc + 1);
+          trimStringEnd(lineKey);
+          trimStringStart(lineValue);
+          sectionLookup_[currentSection].push_back(INIPair(lineKey, lineValue));
+          directLookup_[lineKey] = INIPair(lineKey, lineValue);
+          continue;
+        }
 
-        continue;
-      }
+        // Case: Default
+        // Notes: Could be anything at this point, but uhh... lets call it a key. Sure.
+        lineKey = currentLine;
 
-      // Case: Key-value pair
-      // Appearance: key = value
-      // Appearance: key=value
-      // Appearance: key =
-      // Appearance: = value
-      // Notes: Trailing and leading whitespace ignored.
-      std::size_t loc = currentLine.find_first_of("=");
-      if (loc != currentLine.npos)
-      {
-        std::string key = currentLine.substr(0, loc);
-        std::string value = currentLine.substr(loc + 1);
-        trimStringEnd(key);
-        trimStringStart(value);
-        sectionLookup_[currentSection].push_back(INIPair(key, value));
-        directLookup_[key] = INIPair(key, value);
-      }
+      } while (0);
+
+      // Track line contents and reset values as necessary.
+      lines_.push_back({ lineSection, lineComment, lineKey, lineValue });
+      lineComment = "";
+      lineKey = "";
+      lineValue = "";
     }
   }
 }
 
-std::vector<INIPair> INIParser::GetSection(std::string section)
+std::vector<INIPair> INIData::GetSection(std::string section)
 {
   auto iter = sectionLookup_.find(section);
 
@@ -166,7 +202,7 @@ std::vector<INIPair> INIParser::GetSection(std::string section)
     return {  };
 }
 
-INIPair INIParser::GetPair(std::string key)
+INIPair INIData::GetPair(std::string key)
 {
   auto iter = directLookup_.find(key);
 
@@ -177,7 +213,7 @@ INIPair INIParser::GetPair(std::string key)
 }
 
 // Alternately, if allocating memory, we can return a reference. 
-std::string INIParser::Get(std::string key)
+std::string INIData::Get(std::string key)
 {
   auto iter = directLookup_.find(key);
 
@@ -185,4 +221,35 @@ std::string INIParser::Get(std::string key)
     return iter->second.Value;
   else
     return {};
+}
+
+// Exports the data in a string formatted to be a valid INI file.
+std::string INIData::Export()
+{
+  std::string accumulated = "";
+  bool fencepost = true;
+
+  for (const INILine &line : lines_)
+  {
+    if (!fencepost)
+      accumulated += "\n";
+
+    // If it's empty, skip. We just want it to be an empty line.
+    if (line.Comment.size() == 0 && line.Key.size() == 0 && line.Value.size() == 0 && line.Section.size() == 0)
+      continue;
+
+    // If it was just a comment line, export it as such.
+    if (line.Key.size() == 0 && line.Value.size() == 0 && line.Section.size() == 0)
+      accumulated += "; " + line.Comment;
+
+    // If at this point we have a section, print it.
+    if (line.Section.size() > 0)
+      accumulated += "[" + line.Section + "]";
+
+    // By default, output the key and value. 'key = value', 'key = ', and ' = value' are all valid outputs.
+    accumulated += line.Key + " = " + line.Value;
+
+    fencepost = false;
+  }
+
 }
