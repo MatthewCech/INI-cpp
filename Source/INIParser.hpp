@@ -112,15 +112,17 @@ INIData::INIData(std::fstream &file) : file_(file)
 {
   if (file.is_open())
   {
-    std::string lineComment = "";
-    std::string lineKey = "";
-    std::string lineValue = "";
-    std::string lineSection = "";
     std::string currentLine = "";
     std::string currentSection = "";
 
     while (std::getline(file, currentLine))
     {
+      std::string lineComment = "";
+      std::string lineKey = "";
+      std::string lineValue = "";
+      std::string lineSection = "";
+
+      // Start by trimming regardless
       trimString(currentLine);
 
       // Use loop for contained jumping.
@@ -182,10 +184,6 @@ INIData::INIData(std::fstream &file) : file_(file)
       } while (0);
 
       lines_.push_back({ lineSection, lineComment, lineKey, lineValue });
-      lineSection = "";
-      lineComment = "";
-      lineKey = "";
-      lineValue = "";
     }
   }
 }
