@@ -41,12 +41,6 @@ public:
   std::string Export();
 
 private:
-  // Private methods
-  void trimStringStart(std::string &str);
-  void trimStringEnd(std::string &str);
-  void trimString(std::string &str);
-  bool INIData::startsWith(const std::string &line, const std::string &chars);
-
   // Internal structures
   struct INILine
   {
@@ -56,6 +50,13 @@ private:
     std::string Key;
     std::string Value;
   };
+
+  // Private methods
+  void trimStringStart(std::string &str);
+  void trimStringEnd(std::string &str);
+  void trimString(std::string &str);
+  bool INIData::startsWith(const std::string &line, const std::string &chars);
+
 
   // Internal data and refs
   std::fstream &file_;
@@ -177,20 +178,17 @@ INIData::INIData(std::fstream &file) : file_(file)
           continue;
         }
 
-        // Case: Default
-        // Notes: Could be anything at this point, but uhh... lets call it a key. Sure.
-        lineKey = currentLine;
-
       } while (0);
 
-      // Track line contents and reset values as necessary.
       lines_.push_back({ lineSection, lineComment, lineKey, lineValue });
+      lineSection = "";
       lineComment = "";
       lineKey = "";
       lineValue = "";
     }
   }
 }
+
 
 std::vector<INIPair> INIData::GetSection(std::string section)
 {
@@ -252,4 +250,7 @@ std::string INIData::Export()
     fencepost = false;
   }
 
+  // Make it a valid text file.
+  accumulated += "\n";
+  return accumulated;
 }

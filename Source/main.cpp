@@ -40,7 +40,7 @@ TEST_RETURN TestPairSplit()
 {
   std::string testString = "testKey=testValue";
   std::fstream testFile = CreateTempFile(testString);
-  INIParser parser = INIParser(testFile);
+  INIData parser = INIData(testFile);
 
   INIPair pair = parser.GetPair("testKey");
   if (pair.Key == "testKey" && pair.Value == "testValue")
@@ -53,7 +53,7 @@ TEST_RETURN TestPairSplitWhitespace()
 {
   std::string testString = " testKey = testValue ";
   std::fstream testFile = CreateTempFile(testString);
-  INIParser parser = INIParser(testFile);
+  INIData parser = INIData(testFile);
 
   INIPair pair = parser.GetPair("testKey");
   if (pair.Key == "testKey" && pair.Value == "testValue")
@@ -66,7 +66,7 @@ TEST_RETURN TestDefaultCateogry()
 {
   std::string testString = "testKey=testValue";
   std::fstream testFile = CreateTempFile(testString);
-  INIParser parser = INIParser(testFile);
+  INIData parser = INIData(testFile);
 
   if (parser.GetSection("").size() == 1 && parser.GetSection("")[0].Key == "testKey" && parser.GetSection("")[0].Value == "testValue")
     return TEST_SUCCESS;
@@ -78,7 +78,7 @@ TEST_RETURN TestPairCategory()
 {
   std::string testString = "[section]\ntestKey=testValue";
   std::fstream testFile = CreateTempFile(testString);
-  INIParser parser = INIParser(testFile);
+  INIData parser = INIData(testFile);
 
   auto pairVector = parser.GetSection("section");
   if(pairVector.size() == 1 && pairVector[0].Key == "testKey" && pairVector[0].Value == "testValue")
