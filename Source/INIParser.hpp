@@ -39,6 +39,7 @@ public:
   INIPair GetPair(std::string key);
   std::string Get(std::string key);
   std::string Export();
+  std::string ExperimentalExport();
 
 private:
   // Internal structures
@@ -221,17 +222,41 @@ std::string INIData::Get(std::string key)
     return {};
 }
 
-// Exports the data in a string formatted to be a valid INI file.
+// Bunt export. Goes through each section and dumps everything in it.
 std::string INIData::Export()
 {
   std::string accumulated = "";
   bool fencepost = true;
 
+  for (auto &sectionPair : sectionLookup_)
+  {
+    accumulated += "[" + sectionPair.first + "]\n";
+
+    for (auto &keyValuePair : sectionPair.second)
+    {
+      accumulated += keyValuePair.Key + " = " + keyValuePair.Value;
+      accumulated += "\n";
+    }
+
+    // A single pass is a single printed line.
+    accumulated += "\n";
+  }
+
+  return accumulated;
+}
+
+// Exports the data in a string formatted to be a valid INI file.
+// This is attempting to export the values but maintain original
+// comments from the first file. This... may not work. It'll most
+// certainly be interated on several times.
+//
+// NOTE(mcech): Attempt storage w/ structure: std::vector<INILine*>, where INILine* is: { section, comment, INIPair* }
+std::string INIData::ExperimentalExport()
+{
+  std::string accumulated = "";
+
   for (const INILine &line : lines_)
   {
-    if (!fencepost)
-      accumulated += "\n";
-
     // If it's empty, skip. We just want it to be an empty line.
     if (line.Comment.size() == 0 && line.Key.size() == 0 && line.Value.size() == 0 && line.Section.size() == 0)
       continue;
@@ -247,10 +272,9 @@ std::string INIData::Export()
     // By default, output the key and value. 'key = value', 'key = ', and ' = value' are all valid outputs.
     accumulated += line.Key + " = " + line.Value;
 
-    fencepost = false;
+    // A single pass is a single printed line.
+    accumulated += "\n";
   }
 
-  // Make it a valid text file.
-  accumulated += "\n";
   return accumulated;
 }
